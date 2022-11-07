@@ -14,12 +14,6 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.parse
+package com.valaphee.redsynth.tree
 
-data class Module(
-    val name: String,
-    val inputs: List<Wire>,
-    val outputs: List<Wire>,
-    val wires: List<Wire>,
-    val assignments: List<Assignment>
-)
+sealed interface Expression

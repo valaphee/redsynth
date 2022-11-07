@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.parse
+package com.valaphee.redsynth.tree
 
-sealed interface Expression
+data class Operator(
+    val type: Type,
+    val inputs: List<Expression>
+) : Expression {
+    enum class Type {
+        Not,
+        And,
+        Or,
+        Xor
+    }
+}

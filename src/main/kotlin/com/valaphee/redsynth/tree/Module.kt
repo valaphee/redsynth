@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.parse
+package com.valaphee.redsynth.tree
 
-data class Wire(
+data class Module(
     val name: String,
-    val range: IntRange = 0..0,
-) : Expression
+    val inputDeclarations: List<Port>,
+    val outputDeclarations: List<Port>,
+    val netDeclarations: List<Port>,
+    val continuousAssigns: List<Assignment>
+)

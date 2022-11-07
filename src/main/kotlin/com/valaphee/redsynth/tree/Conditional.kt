@@ -14,16 +14,10 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.parse
+package com.valaphee.redsynth.tree
 
-data class Operator(
-    val type: Type,
-    val inputs: List<Expression>
-) : Expression {
-    enum class Type {
-        Not,
-        And,
-        Or,
-        Xor
-    }
-}
+data class Conditional(
+    val expression: Expression,
+    val trueBranch: Statement,
+    val falseBranch: Statement
+) : Statement

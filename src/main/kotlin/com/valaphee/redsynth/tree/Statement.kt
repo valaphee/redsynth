@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.parse
+package com.valaphee.redsynth.tree
 
-data class Assignment(
-    val output: Wire,
-    val input: Expression
-)
+sealed interface Statement
