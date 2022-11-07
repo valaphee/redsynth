@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-rootProject.name = "redsynth"
+package com.valaphee.redsynth.parse
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        maven{ setUrl("https://papermc.io/repo/repository/maven-public/") }
-    }
-}
+data class Module(
+    val name: String,
+    val inputs: List<Wire>,
+    val outputs: List<Wire>,
+    val wires: List<Wire>,
+    val assignments: List<Assignment>
+)

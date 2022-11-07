@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-rootProject.name = "redsynth"
+package com.valaphee.redsynth
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        maven{ setUrl("https://papermc.io/repo/repository/maven-public/") }
-    }
+import org.bukkit.plugin.java.JavaPlugin
+
+class RedSynth : JavaPlugin() {
+    
 }

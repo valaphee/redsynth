@@ -1,0 +1,5 @@
+name: RedSynth
+version: ${project.version}
+author: Valaphee
+main: com.valaphee.redsynth.RedSynth
+api-version: 1.19

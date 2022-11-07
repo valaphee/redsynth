@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-rootProject.name = "redsynth"
+package com.valaphee.redsynth.parse
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        maven{ setUrl("https://papermc.io/repo/repository/maven-public/") }
+data class Operator(
+    val type: Type,
+    val inputs: List<Expression>
+) : Expression {
+    enum class Type {
+        Not,
+        And,
+        Or,
+        Xor
     }
 }
