@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.yosys
+package com.valaphee.redsynth.logic
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class Netlist(
@@ -30,26 +31,27 @@ data class Netlist(
     ) {
         enum class Direction {
             @JsonProperty("input") Input,
-            @JsonProperty("output") Output
+            @JsonProperty("output") Output,
+            @JsonProperty("inout") Inout
         }
 
         data class Port(
             @JsonProperty("direction") val direction: Direction,
-            @JsonProperty("bits") val bits: List<Int>
+            @JsonProperty("bits") val bits: List<Any> // "0", "1", "x", "z" or number
         )
 
         data class Cell(
-            @JsonProperty("hide_name") val hideName: Int,
+            @JsonProperty("hide_name") @JsonFormat(shape = JsonFormat.Shape.NUMBER) val hideName: Boolean,
             @JsonProperty("type") val type: String,
-            @JsonProperty("parameters") val parameters: Map<String, Any>,
+            @JsonProperty("parameters") val parameters: Map<String, String>,
             @JsonProperty("attributes") val attributes: Map<String, String>,
             @JsonProperty("port_directions") val portDirections: Map<String, Direction>,
-            @JsonProperty("connections") val connections: Map<String, List<Any>>
+            @JsonProperty("connections") val connections: Map<String, List<Any>> // "0", "1", "x", "z" or number
         )
 
         data class Netname(
             @JsonProperty("hide_name") val hideName: Int,
-            @JsonProperty("bits") val bits: List<Int>,
+            @JsonProperty("bits") val bits: List<Any>, // "0", "1", "x", "z" or number
             @JsonProperty("attributes") val attributes: Map<String, String>
         )
     }

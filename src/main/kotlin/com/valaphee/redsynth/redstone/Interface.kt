@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.layout
+package com.valaphee.redsynth.redstone
 
 import com.valaphee.redsynth.util.BoundingBox
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
