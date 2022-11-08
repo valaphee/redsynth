@@ -8,7 +8,7 @@
 ![license](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 ![version](https://img.shields.io/badge/Version-0.0.1-darkred.svg)
 
-Generate redstone circuits from Verilog.
+Generate redstone circuits out of Verilog.
 
 ## References
 * http://www.csit-sun.pub.ro/~cpop/VerilogHDL_Tools/synver.pdf

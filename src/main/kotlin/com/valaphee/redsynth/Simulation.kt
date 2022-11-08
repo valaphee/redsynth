@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-package com.valaphee.redsynth.process
+package com.valaphee.redsynth
 
-import com.valaphee.redsynth.layout.Layout
-import com.valaphee.redsynth.tree.Expression
-import com.valaphee.redsynth.tree.Module
-import com.valaphee.redsynth.tree.Operator
-import com.valaphee.redsynth.tree.Port
+import com.valaphee.redsynth.layout.Interface
+import com.valaphee.redsynth.yosys.Yosys
 import org.bukkit.scheduler.BukkitTask
 
-class Process(
-    val module: Module,
-    val layout: Layout
+class Simulation(
+    val yosys: Yosys,
+    val `interface`: Interface
 ) : Runnable {
     private val values = mutableMapOf<String, Boolean>()
 
@@ -42,18 +39,6 @@ class Process(
     override fun run() {
         if (update) {
             update = false
-        }
-    }
-
-    private fun Expression.evaluate(): Boolean = when (this) {
-        is Port -> values[name] ?: false
-        is Operator -> {
-            when (type) {
-                Operator.Type.Not -> inputs[0].evaluate()
-                Operator.Type.And -> inputs[0].evaluate() and inputs[1].evaluate()
-                Operator.Type.Or -> inputs[0].evaluate() or inputs[1].evaluate()
-                Operator.Type.Xor -> inputs[0].evaluate() xor inputs[1].evaluate()
-            }
         }
     }
 }

@@ -28,7 +28,8 @@ version = "${details.lastTag}.${details.commitDistance}"
 
 dependencies {
     paperDevBundle("1.19.2-R0.1-SNAPSHOT")
-    implementation("com.github.h0tk3y.betterParse:better-parse:0.4.4")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.0")
+    implementation("org.apache.commons:commons-collections4:4.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 }
 

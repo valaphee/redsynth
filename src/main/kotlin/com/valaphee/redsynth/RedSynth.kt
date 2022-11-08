@@ -16,11 +16,9 @@
 
 package com.valaphee.redsynth
 
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
-import com.valaphee.redsynth.layout.Layout
-import com.valaphee.redsynth.process.Process
-import com.valaphee.redsynth.tree.Grammar
+import com.valaphee.redsynth.layout.Interface
 import com.valaphee.redsynth.util.BoundingBox
+import com.valaphee.redsynth.yosys.Yosys
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
@@ -34,10 +32,9 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockRedstoneEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.plugin.java.JavaPlugin
-import java.io.File
 
 class RedSynth : JavaPlugin(), Listener {
-    private val mSimulators = mutableMapOf<Block, Process>()
+    private val simulations = mutableMapOf<Block, Simulation>()
 
     override fun onLoad() {
         dataFolder.mkdir()
@@ -48,7 +45,6 @@ class RedSynth : JavaPlugin(), Listener {
     }
 
     override fun onDisable() {
-        mSimulators.clear()
     }
 
     @EventHandler
@@ -61,17 +57,17 @@ class RedSynth : JavaPlugin(), Listener {
                 val blockState = it.state as Sign
                 if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[red synth]", ignoreCase = true)) {
                     blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[Red Synth]"))
-                    if (!mSimulators.contains(it)) {
+                    if (!simulations.contains(it)) {
                         try {
-                            val process = Process(Grammar.parseToEnd(File(dataFolder, PlainTextComponentSerializer.plainText().serialize(blockState.line(1))).readText()), Layout(it.getRelative(blockData.facing.oppositeFace))) 
-                            mSimulators[it] = process
-                            process.task = server.scheduler.runTaskTimer(this, process, 0, 1)
+                            val simulation = Simulation(Yosys(PlainTextComponentSerializer.plainText().serialize(blockState.line(1))), Interface(it.getRelative(blockData.facing.oppositeFace)))
+                            simulations[it] = simulation
+                            simulation.task = server.scheduler.runTaskTimer(this, simulation, 0, 1)
                             blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§2Running"))
                         } catch (ex: Exception) {
                             player.sendMessage(ex.message!!)
                             blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§4Failure"))
                         }
-                    } else mSimulators.remove(it)?.let {
+                    } else simulations.remove(it)?.let {
                         server.scheduler.cancelTask(it.task.taskId)
                         blockState.line(3, Component.empty())
                     }
@@ -85,16 +81,16 @@ class RedSynth : JavaPlugin(), Listener {
     fun on(event: BlockRedstoneEvent) {
         val block = event.block
         val boundingBox = BoundingBox(block.x - 1, block.y, block.z - 1, block.x + 1, block.y, block.z + 1)
-        for (simulator in mSimulators.values) {
-            if (!simulator.layout.boundingBox.intersects(boundingBox)) {
+        for (simulation in simulations.values) {
+            if (!simulation.`interface`.boundingBox.intersects(boundingBox)) {
                 continue
             }
 
             when (val blockData = block.blockData) {
-                is Directional -> simulator.layout.ports[block.getRelative(blockData.facing.oppositeFace)]
-                is RedstoneWire -> blockData.allowedFaces.firstNotNullOfOrNull { if (blockData.getFace(it) == RedstoneWire.Connection.SIDE) simulator.layout.ports[block.getRelative(it)] else null }
+                is Directional -> simulation.`interface`.ports[block.getRelative(blockData.facing.oppositeFace)]
+                is RedstoneWire -> blockData.allowedFaces.firstNotNullOfOrNull { if (blockData.getFace(it) == RedstoneWire.Connection.SIDE) simulation.`interface`.ports[block.getRelative(it)] else null }
                 else -> null
-            }?.let { simulator[it] = event.newCurrent != 0 }
+            }?.let { simulation[it] = event.newCurrent != 0 }
         }
     }
 }

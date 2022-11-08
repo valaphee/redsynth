@@ -24,7 +24,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 
-class Layout(
+class Interface(
     block: Block
 ) {
     val boundingBox = BoundingBox()
