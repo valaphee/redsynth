@@ -27,7 +27,7 @@ class Yosys(
         execute("read_verilog $path")
     }
 
-    fun synthesis() = apply { execute("synth") }
+    fun synthesis() = apply { execute("hierarchy -check; proc; flatten; opt_expr; opt_clean; check; opt -nodffe -nosdff; fsm; opt; wreduce; peepopt; opt_clean; alumacc; share; opt; memory -nomap; opt_clean; opt -fast -full; memory_map; opt -full; techmap; opt -fast; abc -fast -g OR; opt -fast; hierarchy -check; check") }
 
     fun netlist() = jacksonObjectMapper().readValue<Netlist>(execute("json"))
 }

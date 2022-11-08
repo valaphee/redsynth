@@ -17,75 +17,47 @@
 package com.valaphee.redsynth.redstone
 
 import com.valaphee.redsynth.logic.Netlist
+import org.optaplanner.core.api.domain.solution.PlanningSolution
 
+@PlanningSolution
 class Circuit(
-    netlist: Netlist
+    module: Netlist.Module
 ) {
-    private val connections: Map<String, Connection>
+    val vertices: List<Vertex>
 
     init {
-        val module = netlist.modules.values.first()
-        val connections = mutableMapOf<Int, Connection>()
-        module.ports.forEach { (name, port) -> port.bits.forEach { connection -> connections[connection as Int] = Connection(name) } }
+        val vertices = mutableMapOf<Int, Vertex>()
         module.cells.values.forEach {
             when (it.type) {
-                "\$_OR_" -> OrComponent(listOf(connections.getOrPut(it.connections["A"]!!.single() as Int) { Connection() }, connections.getOrPut(it.connections["B"]!!.single() as Int) { Connection() }), listOf(connections.getOrPut(it.connections["Y"]!!.single() as Int) { Connection() }))
-                "\$_AND_" -> AndComponent(listOf(connections.getOrPut(it.connections["A"]!!.single() as Int) { Connection() }, connections.getOrPut(it.connections["B"]!!.single() as Int) { Connection() }), listOf(connections.getOrPut(it.connections["Y"]!!.single() as Int) { Connection() }))
-                "\$_XOR_" -> XorComponent(connections.getOrPut(it.connections["A"]!!.single() as Int) { Connection() }, connections.getOrPut(it.connections["B"]!!.single() as Int) { Connection() }, listOf(connections.getOrPut(it.connections["Y"]!!.single() as Int) { Connection() }))
+                "\$_NOT_" -> {
+                    val incomingEdge = vertices.getOrPut(it.connections["A"]!!.single() as Int) { ConnectionVertex() } as ConnectionVertex
+                    vertices[it.connections["A"]!!.single() as Int] = NegationVertex(incomingEdge).also { incomingEdge.edges += it }
+                }
+                "\$_OR_" -> {
+                    val edgeA = vertices.getOrPut(it.connections["A"]!!.single() as Int) { ConnectionVertex() }
+                    val edgeB = vertices.getOrPut(it.connections["B"]!!.single() as Int) { ConnectionVertex() }
+                    val edgeY = vertices.getOrPut(it.connections["Y"]!!.single() as Int) { ConnectionVertex() }
+                    vertices[it.connections["A"]!!.single() as Int] = ConnectionVertex(mutableListOf(edgeA, edgeB, edgeY)).also {
+                        edgeA.edges += it
+                        edgeB.edges += it
+                    }
+                }
+                else -> error(it)
             }
         }
-        this.connections = connections.values.mapNotNull { it.name?.let { name -> name to it } }.toMap()
+        this.vertices = vertices.values.toList()
     }
 
-    private class Connection(
-        val name: String? = null
-    ) {
-        val inputs = mutableListOf<Component>()
-        val outputs = mutableListOf<Component>()
-    }
+    sealed class Vertex(
+        val edges: MutableList<Vertex> = mutableListOf()
+    )
 
-    private sealed interface Component
+    class ConnectionVertex(
+        edges: MutableList<Vertex> = mutableListOf()
+    ) : Vertex(edges)
 
-    private class NotComponent(
-        val input: Connection,
-        val outputs: List<Connection>
-    ) : Component {
-        init {
-            input.outputs += this
-            outputs.forEach { it.inputs += this }
-        }
-    }
-
-    private class OrComponent(
-        val inputs: List<Connection>,
-        val outputs: List<Connection>
-    ) : Component {
-        init {
-            inputs.forEach { it.outputs += this }
-            outputs.forEach { it.inputs += this }
-        }
-    }
-
-    companion object {
-        private fun List<Connection>.invert() = map { Connection().apply { NotComponent(it, listOf(this)) } }
-
-        @Suppress("FunctionName")
-        private fun NorComponent(inputs: List<Connection>, outputs: List<Connection>) {
-            NotComponent(Connection().apply { OrComponent(inputs.invert(), listOf(this)) }, outputs)
-        }
-
-        @Suppress("FunctionName")
-        private fun AndComponent(inputs: List<Connection>, outputs: List<Connection>) {
-            NorComponent(inputs.invert(), outputs)
-        }
-
-        @Suppress("FunctionName")
-        private fun XorComponent(inputA: Connection, inputB: Connection, outputs: List<Connection>) {
-            val tmp1 = Connection()
-            val tmp2 = Connection()
-            AndComponent(listOf(inputA, inputB), listOf(tmp1))
-            NorComponent(listOf(inputA, inputB), listOf(tmp2))
-            OrComponent(listOf(tmp1, tmp2), outputs)
-        }
-    }
+    class NegationVertex(
+        val incomingEdge: ConnectionVertex,
+        edges: MutableList<ConnectionVertex> = mutableListOf()
+    ) : Vertex(edges.toMutableList())
 }

@@ -12,3 +12,4 @@ Generate redstone circuits out of Verilog.
 
 ## References
 * http://www.csit-sun.pub.ro/~cpop/VerilogHDL_Tools/synver.pdf
+* https://yosyshq.net/yosys/files/yosys_manual.pdf

@@ -24,16 +24,16 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 
-class Interface(
+class PinLayout(
     block: Block
 ) {
     val boundingBox = BoundingBox()
 
-    val ports: Map<Block, String>
-    val portsByName: Map<String, List<Block>>
+    val pins: Map<Block, String>
+    val pinsByName: Map<String, List<Block>>
 
     init {
-        val portsByBlock = mutableMapOf<Block, String>()
+        val pins = mutableMapOf<Block, String>()
 
         val visitedBlocks = mutableSetOf<Block>()
         val blocksToVisit = mutableListOf(block)
@@ -66,7 +66,7 @@ class Interface(
                             else -> null
                         }
                         else -> null
-                    }?.let { portsByBlock[it] = PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(1)) }
+                    }?.let { pins[it] = PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(1)) }
                 } else when (neighborBlock.type) {
                     Material.WHITE_CONCRETE, Material.LIGHT_GRAY_CONCRETE, Material.BLACK_CONCRETE, Material.REDSTONE_BLOCK -> blocksToVisit.add(neighborBlock)
                     else -> Unit
@@ -78,7 +78,7 @@ class Interface(
             visitedBlocks += block
         }
 
-        this.ports = portsByBlock
-        portsByName = portsByBlock.entries.groupBy { it.value }.mapValues { it.value.map { it.key } }
+        this.pins = pins
+        pinsByName = pins.entries.groupBy { it.value }.mapValues { it.value.map { it.key } }
     }
 }
