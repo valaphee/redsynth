@@ -16,6 +16,8 @@
 
 package com.valaphee.redsynth
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.valaphee.redsynth.logic.Yosys
 import com.valaphee.redsynth.redstone.Circuit
 import com.valaphee.redsynth.redstone.PinLayout
@@ -26,6 +28,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.block.Block
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
+import org.bukkit.command.CommandSender
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
@@ -35,47 +38,28 @@ import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 
 class RedSynth : JavaPlugin(), Listener {
+    private lateinit var config: RedSynthConfig
+
     private val simulations = mutableMapOf<Block, Simulation>()
 
-    override fun onLoad() {
-        dataFolder.mkdir()
-    }
-
     override fun onEnable() {
+        if (!dataFolder.exists()) dataFolder.mkdir()
+
+        val configFile = File(dataFolder, "config.json")
+        config = if (!configFile.exists()) RedSynthConfig().apply { jacksonObjectMapper().writerWithDefaultPrettyPrinter().writeValue(configFile, this) } else jacksonObjectMapper().readValue(configFile)
+
         server.pluginManager.registerEvents(this, this)
+
+        config.simulations.forEach { toggleSimulation(server.consoleSender, it.block) }
     }
 
     override fun onDisable() {
+        jacksonObjectMapper().writerWithDefaultPrettyPrinter().writeValue(File(dataFolder, "config.json"), config)
     }
 
     @EventHandler
     fun on(event: PlayerInteractEvent) {
-        val player = event.player
-
-        event.clickedBlock?.let { 
-            val blockData = it.blockData
-            if (blockData is WallSign) {
-                val blockState = it.state as Sign
-                if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[RedSynth]", ignoreCase = true)) {
-                    blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[RedSynth]"))
-                    if (!simulations.contains(it)) {
-                        try {
-                            val simulation = Simulation(this, PinLayout(it.getRelative(blockData.facing.oppositeFace)), Circuit(Yosys(File(dataFolder, PlainTextComponentSerializer.plainText().serialize(blockState.line(1))).path).synthesis().netlist().modules.values.single()))
-                            simulations[it] = simulation
-                            simulation.start()
-                            blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§2Running"))
-                        } catch (ex: Exception) {
-                            player.sendMessage(ex.message!!)
-                            blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§4Failure"))
-                        }
-                    } else simulations.remove(it)?.let {
-                        it.stop()
-                        blockState.line(3, Component.empty())
-                    }
-                    blockState.update()
-                }
-            }
-        }
+        event.clickedBlock?.let { toggleSimulation(event.player, it) }
     }
 
     @EventHandler
@@ -90,5 +74,36 @@ class RedSynth : JavaPlugin(), Listener {
     fun on(event: BlockBreakEvent) {
         val block = event.block
         simulations.values.find { it.pinLayout.boundingBox.contains(block.x, block.y, block.z) }?.on(event)
+    }
+
+    private fun toggleSimulation(sender: CommandSender, block: Block) {
+        val blockData = block.blockData
+        if (blockData is WallSign) {
+            val blockState = block.state as Sign
+            if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[RedSynth]", ignoreCase = true)) {
+                blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[RedSynth]"))
+                if (!simulations.contains(block)) {
+                    try {
+                        val simulation = Simulation(this, PinLayout(block.getRelative(blockData.facing.oppositeFace)), Circuit(Yosys(File(dataFolder, PlainTextComponentSerializer.plainText().serialize(blockState.line(1))).path).synthesis().netlist().modules.values.single()))
+                        simulations[block] = simulation
+                        simulation.start()
+
+                        blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§2Running"))
+
+                        config.simulations += block.location
+                    } catch (ex: Exception) {
+                        sender.sendMessage(ex.message!!)
+                        blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§4Failure"))
+                    }
+                } else simulations.remove(block)?.let {
+                    config.simulations -= block.location
+
+                    it.stop()
+
+                    blockState.line(3, Component.empty())
+                }
+                blockState.update()
+            }
+        }
     }
 }

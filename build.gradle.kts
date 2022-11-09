@@ -15,7 +15,6 @@
  */
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "7.0.0"
     id("com.palantir.git-version") version "0.12.3"
     id("io.papermc.paperweight.userdev") version "1.3.8"
     kotlin("jvm") version "1.7.20"
@@ -29,7 +28,7 @@ version = "${details.lastTag}.${details.commitDistance}"
 dependencies {
     paperDevBundle("1.19.2-R0.1-SNAPSHOT")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.0")
-    implementation("org.optaplanner:optaplanner-core:8.29.0.Final")
+    /*implementation("org.optaplanner:optaplanner-core:8.29.0.Final")*/
 }
 
 tasks {
@@ -43,8 +42,4 @@ tasks {
     processResources { filesMatching("/plugin.yml") { expand("project" to project) } }
 
     assemble { dependsOn(reobfJar) }
-
-    shadowJar { archiveName = "redsynth.jar" }
-
-    build { dependsOn(shadowJar) }
 }

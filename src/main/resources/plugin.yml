@@ -3,3 +3,5 @@ version: ${project.version}
 author: Valaphee
 main: com.valaphee.redsynth.RedSynth
 api-version: 1.19
+libraries:
+  - com.fasterxml.jackson.module:jackson-module-kotlin:2.14.0

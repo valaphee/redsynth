@@ -50,6 +50,7 @@ class PinLayout(
                     val neighborBlockState = neighborBlock.state as Sign
                     when (PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(0))) {
                         "^" -> neighborBlock.getRelative(neighborBlockData.facing.oppositeFace).getRelative(0, 1, 0)
+                        "°" -> neighborBlock.getRelative(neighborBlockData.facing.oppositeFace)
                         "v" -> neighborBlock.getRelative(neighborBlockData.facing.oppositeFace).getRelative(0, -1, 0)
                         "<" -> when (neighborBlockData.facing.oppositeFace) {
                             BlockFace.NORTH -> neighborBlock.getRelative(-1, 0, -1)
