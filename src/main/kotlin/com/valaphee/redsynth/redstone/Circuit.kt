@@ -25,7 +25,7 @@ class Circuit(
 
     init {
         val vertices = mutableMapOf<Int, Vertex>()
-        module.ports.forEach { (name, port) -> port.bits.forEach { vertices[it as Int] = Vertex(name) } }
+        module.ports.forEach { (name, port) -> port.bits.forEachIndexed { index, bit -> vertices[bit as Int] = Vertex(name to index) } }
         module.cells.forEach { (name, cell) ->
             when (cell.type) {
                 "\$_NOT_" -> {
@@ -48,12 +48,12 @@ class Circuit(
         this.vertices = vertices.values.toList()
     }
 
-    operator fun get(name: String) = vertices.find { it.name == name }
+    operator fun get(nameAndIndex: Pair<String, Int>) = vertices.find { it.nameAndIndex == nameAndIndex }
 
-    override fun toString() = StringBuilder().apply { vertices.filter { it.name != null }.forEach { appendLine(it.toString(it.outgoingEdges.isEmpty())) } }.toString()
+    override fun toString() = StringBuilder().apply { vertices.filter { it.nameAndIndex != null }.forEach { appendLine(it.toString(it.outgoingEdges.isEmpty())) } }.toString()
 
     class Vertex(
-        val name: String? = null,
+        val nameAndIndex: Pair<String, Int>? = null,
         val negation: Boolean = false,
         val incomingEdges: MutableList<Vertex> = mutableListOf(),
         val outgoingEdges: MutableList<Vertex> = mutableListOf()
@@ -75,7 +75,7 @@ class Circuit(
         private fun toString(direction: Boolean, prefix: StringBuilder, right: Boolean, result: StringBuilder): StringBuilder {
             val edges = if (direction) incomingEdges else outgoingEdges
             edges.getOrNull(0)?.toString(direction, StringBuilder().append(prefix).append(if (right) "│ " else "  "), false, result)
-            result.append(prefix).append(if (right) "└─" else "┌─").append(name ?: if (negation) "╡" else "┤").append("\n")
+            result.append(prefix).append(if (right) "└─" else "┌─").append(nameAndIndex?.let { "${it.first}:${it.second}" } ?: if (negation) "╡" else "┤").append("\n")
             edges.getOrNull(1)?.toString(direction, StringBuilder().append(prefix).append(if (right) "  " else "│ "), true, result)
             return result
         }

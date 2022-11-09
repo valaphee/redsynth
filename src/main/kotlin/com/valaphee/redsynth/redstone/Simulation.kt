@@ -34,7 +34,7 @@ class Simulation(
     private var update = true
 
     init {
-        circuit.vertices.forEach { if (it.name != null && it.incomingEdges.isEmpty()) pinLayout.pinsByName[it.name]?.single()?.isBlockPowered?.let { value -> it.value = value } }
+        circuit.vertices.forEach { if (it.nameAndIndex != null && it.incomingEdges.isEmpty()) pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.single()?.isBlockPowered?.let { value -> it.value = value } }
     }
 
     fun start() {
@@ -60,7 +60,8 @@ class Simulation(
 
     /*@EventHandler*/
     fun on(event: BlockBreakEvent) {
-        event.block.pin?.let {
+        val block = event.block
+        if (block.isBlockIndirectlyPowered) event.block.pin?.let {
             circuit[it]?.let {
                 if (it.value) {
                     it.value = false
@@ -74,9 +75,9 @@ class Simulation(
         if (update) {
             update = false
             circuit.vertices.forEach {
-                if (it.name != null && it.outgoingEdges.isEmpty()) {
+                if (it.nameAndIndex != null && it.outgoingEdges.isEmpty()) {
                     val type = if (it.evaluate()) Material.REDSTONE_BLOCK else Material.WHITE_CONCRETE
-                    pinLayout.pinsByName[it.name]?.forEach { it.type = type }
+                    pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.forEach { it.type = type }
                 }
             }
         }

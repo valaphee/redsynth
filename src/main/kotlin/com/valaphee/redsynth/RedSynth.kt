@@ -20,7 +20,6 @@ import com.valaphee.redsynth.logic.Yosys
 import com.valaphee.redsynth.redstone.Circuit
 import com.valaphee.redsynth.redstone.PinLayout
 import com.valaphee.redsynth.redstone.Simulation
-import com.valaphee.redsynth.util.BoundingBox
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
@@ -57,8 +56,8 @@ class RedSynth : JavaPlugin(), Listener {
             val blockData = it.blockData
             if (blockData is WallSign) {
                 val blockState = it.state as Sign
-                if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[Pin Layout]", ignoreCase = true)) {
-                    blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[Pin Layout]"))
+                if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[RedSynth]", ignoreCase = true)) {
+                    blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[RedSynth]"))
                     if (!simulations.contains(it)) {
                         try {
                             val simulation = Simulation(this, PinLayout(it.getRelative(blockData.facing.oppositeFace)), Circuit(Yosys(File(dataFolder, PlainTextComponentSerializer.plainText().serialize(blockState.line(1))).path).synthesis().netlist().modules.values.single()))
@@ -81,19 +80,15 @@ class RedSynth : JavaPlugin(), Listener {
 
     @EventHandler
     fun on(event: BlockRedstoneEvent) {
-        val block = event.block
         if ((event.oldCurrent != 0).xor(event.newCurrent != 0)) {
-            val boundingBox = BoundingBox(block.x - 1, block.y, block.z - 1, block.x + 1, block.y, block.z + 1)
-            simulations.values.find { it.pinLayout.boundingBox.intersects(boundingBox) }?.on(event)
+            val block = event.block
+            simulations.values.find { it.pinLayout.boundingBox.contains(block.x, block.y, block.z) }?.on(event)
         }
     }
 
     @EventHandler
     fun on(event: BlockBreakEvent) {
         val block = event.block
-        if (block.isBlockIndirectlyPowered) {
-            val boundingBox = BoundingBox(block.x - 1, block.y, block.z - 1, block.x + 1, block.y, block.z + 1)
-            simulations.values.find { it.pinLayout.boundingBox.intersects(boundingBox) }?.on(event)
-        }
+        simulations.values.find { it.pinLayout.boundingBox.contains(block.x, block.y, block.z) }?.on(event)
     }
 }

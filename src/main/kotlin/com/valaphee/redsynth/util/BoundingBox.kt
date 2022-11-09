@@ -67,5 +67,7 @@ class BoundingBox {
         }
     }
 
+    fun contains(x: Int, y: Int, z: Int) = x in minimumX..maximumX && y in minimumY..maximumY && z in minimumZ..maximumZ
+
     fun intersects(boundingBox: BoundingBox) = minimumX <= boundingBox.maximumX && maximumX >= boundingBox.minimumX && minimumY <= boundingBox.maximumY && maximumY >= boundingBox.minimumY && minimumZ <= boundingBox.maximumZ && maximumZ >= boundingBox.minimumZ
 }
