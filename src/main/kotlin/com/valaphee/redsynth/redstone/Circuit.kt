@@ -17,9 +17,7 @@
 package com.valaphee.redsynth.redstone
 
 import com.valaphee.redsynth.logic.Netlist
-import org.optaplanner.core.api.domain.solution.PlanningSolution
 
-@PlanningSolution
 class Circuit(
     module: Netlist.Module
 ) {
@@ -27,37 +25,61 @@ class Circuit(
 
     init {
         val vertices = mutableMapOf<Int, Vertex>()
-        module.cells.values.forEach {
-            when (it.type) {
+        module.ports.forEach { (name, port) -> port.bits.forEach { vertices[it as Int] = Vertex(name) } }
+        module.cells.forEach { (name, cell) ->
+            when (cell.type) {
                 "\$_NOT_" -> {
-                    val incomingEdge = vertices.getOrPut(it.connections["A"]!!.single() as Int) { ConnectionVertex() } as ConnectionVertex
-                    vertices[it.connections["A"]!!.single() as Int] = NegationVertex(incomingEdge).also { incomingEdge.edges += it }
+                    val edgeA = vertices.getOrPut(cell.connections["A"]!!.single() as Int) { Vertex() }
+                    val edgeY = vertices.getOrPut(cell.connections["Y"]!!.single() as Int) { Vertex(negation = true) }
+                    edgeY.incomingEdges += edgeA
+                    edgeA.outgoingEdges += edgeY
                 }
                 "\$_OR_" -> {
-                    val edgeA = vertices.getOrPut(it.connections["A"]!!.single() as Int) { ConnectionVertex() }
-                    val edgeB = vertices.getOrPut(it.connections["B"]!!.single() as Int) { ConnectionVertex() }
-                    val edgeY = vertices.getOrPut(it.connections["Y"]!!.single() as Int) { ConnectionVertex() }
-                    vertices[it.connections["A"]!!.single() as Int] = ConnectionVertex(mutableListOf(edgeA, edgeB, edgeY)).also {
-                        edgeA.edges += it
-                        edgeB.edges += it
-                    }
+                    val edgeA = vertices.getOrPut(cell.connections["A"]!!.single() as Int) { Vertex() }
+                    val edgeB = vertices.getOrPut(cell.connections["B"]!!.single() as Int) { Vertex() }
+                    val edgeY = vertices.getOrPut(cell.connections["Y"]!!.single() as Int) { Vertex() }
+                    edgeY.incomingEdges += listOf(edgeA, edgeB)
+                    edgeA.outgoingEdges += edgeY
+                    edgeB.outgoingEdges += edgeY
                 }
-                else -> error(it)
+                else -> error(name)
             }
         }
         this.vertices = vertices.values.toList()
     }
 
-    sealed class Vertex(
-        val edges: MutableList<Vertex> = mutableListOf()
-    )
+    operator fun get(name: String) = vertices.find { it.name == name }
 
-    class ConnectionVertex(
-        edges: MutableList<Vertex> = mutableListOf()
-    ) : Vertex(edges)
+    override fun toString() = StringBuilder().apply { vertices.filter { it.name != null }.forEach { appendLine(it.toString(it.outgoingEdges.isEmpty())) } }.toString()
 
-    class NegationVertex(
-        val incomingEdge: ConnectionVertex,
-        edges: MutableList<ConnectionVertex> = mutableListOf()
-    ) : Vertex(edges.toMutableList())
+    class Vertex(
+        val name: String? = null,
+        val negation: Boolean = false,
+        val incomingEdges: MutableList<Vertex> = mutableListOf(),
+        val outgoingEdges: MutableList<Vertex> = mutableListOf()
+    ) {
+        var value: Boolean = false
+
+        fun updateAndEvaluate(value: Boolean) {
+            this.value = if (negation) !value else value
+            outgoingEdges.forEach(Vertex::updateAndEvaluate)
+        }
+
+        private fun updateAndEvaluate() {
+            value = if (negation) incomingEdges.none(Vertex::value) else incomingEdges.any(Vertex::value)
+            outgoingEdges.forEach(Vertex::updateAndEvaluate)
+        }
+
+        fun evaluate(): Boolean = if (negation) if (incomingEdges.size == 0) !value else incomingEdges.none(Vertex::evaluate) else if (incomingEdges.size == 0) value else incomingEdges.any(Vertex::evaluate)
+
+        private fun toString(direction: Boolean, prefix: StringBuilder, right: Boolean, result: StringBuilder): StringBuilder {
+            val edges = if (direction) incomingEdges else outgoingEdges
+            edges.getOrNull(0)?.toString(direction, StringBuilder().append(prefix).append(if (right) "│ " else "  "), false, result)
+            result.append(prefix).append(if (right) "└─" else "┌─").append(name ?: if (negation) "╡" else "┤").append("\n")
+            edges.getOrNull(1)?.toString(direction, StringBuilder().append(prefix).append(if (right) "  " else "│ "), true, result)
+            return result
+        }
+
+        fun toString(direction: Boolean) = this.toString(direction, StringBuilder(), true, StringBuilder()).toString()
+    }
 }

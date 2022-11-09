@@ -16,16 +16,28 @@
 
 package com.valaphee.redsynth
 
+import com.valaphee.redsynth.logic.Yosys
+import com.valaphee.redsynth.redstone.Circuit
+import com.valaphee.redsynth.redstone.PinLayout
+import com.valaphee.redsynth.redstone.Simulation
+import com.valaphee.redsynth.util.BoundingBox
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import org.bukkit.block.Block
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockRedstoneEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.plugin.java.JavaPlugin
+import java.io.File
 
 class RedSynth : JavaPlugin(), Listener {
+    private val simulations = mutableMapOf<Block, Simulation>()
+
     override fun onLoad() {
         dataFolder.mkdir()
     }
@@ -39,15 +51,49 @@ class RedSynth : JavaPlugin(), Listener {
 
     @EventHandler
     fun on(event: PlayerInteractEvent) {
+        val player = event.player
+
         event.clickedBlock?.let { 
             val blockData = it.blockData
             if (blockData is WallSign) {
                 val blockState = it.state as Sign
-                if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[interface]", ignoreCase = true)) {
-                    blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[Interface]"))
+                if (PlainTextComponentSerializer.plainText().serialize(blockState.line(0)).equals("[Pin Layout]", ignoreCase = true)) {
+                    blockState.line(0, LegacyComponentSerializer.legacySection().deserialize("§1[Pin Layout]"))
+                    if (!simulations.contains(it)) {
+                        try {
+                            val simulation = Simulation(this, PinLayout(it.getRelative(blockData.facing.oppositeFace)), Circuit(Yosys(File(dataFolder, PlainTextComponentSerializer.plainText().serialize(blockState.line(1))).path).synthesis().netlist().modules.values.single()))
+                            simulations[it] = simulation
+                            simulation.start()
+                            blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§2Running"))
+                        } catch (ex: Exception) {
+                            player.sendMessage(ex.message!!)
+                            blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§4Failure"))
+                        }
+                    } else simulations.remove(it)?.let {
+                        it.stop()
+                        blockState.line(3, Component.empty())
+                    }
                     blockState.update()
                 }
             }
+        }
+    }
+
+    @EventHandler
+    fun on(event: BlockRedstoneEvent) {
+        val block = event.block
+        if ((event.oldCurrent != 0).xor(event.newCurrent != 0)) {
+            val boundingBox = BoundingBox(block.x - 1, block.y, block.z - 1, block.x + 1, block.y, block.z + 1)
+            simulations.values.find { it.pinLayout.boundingBox.intersects(boundingBox) }?.on(event)
+        }
+    }
+
+    @EventHandler
+    fun on(event: BlockBreakEvent) {
+        val block = event.block
+        if (block.isBlockIndirectlyPowered) {
+            val boundingBox = BoundingBox(block.x - 1, block.y, block.z - 1, block.x + 1, block.y, block.z + 1)
+            simulations.values.find { it.pinLayout.boundingBox.intersects(boundingBox) }?.on(event)
         }
     }
 }
