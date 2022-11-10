@@ -95,12 +95,14 @@ class RedSynth : JavaPlugin(), Listener {
                         sender.sendMessage(ex.message!!)
                         blockState.line(3, LegacyComponentSerializer.legacySection().deserialize("§4Failure"))
                     }
-                } else simulations.remove(block)?.let {
-                    config.simulations -= block.location
+                } else {
+                    simulations.remove(block)?.let {
+                        config.simulations -= block.location
 
-                    it.stop()
+                        it.stop()
 
-                    blockState.line(3, Component.empty())
+                        blockState.line(3, Component.empty())
+                    }
                 }
                 blockState.update()
             }

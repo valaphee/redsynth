@@ -18,7 +18,12 @@ package com.valaphee.redsynth.redstone
 
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
+import org.bukkit.block.data.AnaloguePowerable
 import org.bukkit.block.data.Directional
+import org.bukkit.block.data.Lightable
+import org.bukkit.block.data.Openable
+import org.bukkit.block.data.Powerable
 import org.bukkit.block.data.type.RedstoneWire
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockRedstoneEvent
@@ -34,7 +39,8 @@ class Simulation(
     private var update = true
 
     init {
-        circuit.vertices.forEach { if (it.nameAndIndex != null && it.incomingEdges.isEmpty()) pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.single()?.isBlockPowered?.let { value -> it.value = value } }
+        // Set initial state
+        circuit.vertices.forEach { if (it.input) pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.second?.single()?.isBlockPowered?.let { value -> it.value = value } }
     }
 
     fun start() {
@@ -48,7 +54,7 @@ class Simulation(
     /*@EventHandler*/
     fun on(event: BlockRedstoneEvent) {
         event.block.pin?.let {
-            circuit[it]?.let {
+            circuit[it.name to it.index]?.let {
                 val value = event.newCurrent != 0
                 if (it.value != value) {
                     it.value = value
@@ -62,9 +68,10 @@ class Simulation(
     fun on(event: BlockBreakEvent) {
         val block = event.block
         if (block.isBlockIndirectlyPowered) event.block.pin?.let {
-            circuit[it]?.let {
+            circuit[it.name to it.index]?.let {
                 if (it.value) {
                     it.value = false
+
                     update = true
                 }
             }
@@ -74,10 +81,43 @@ class Simulation(
     override fun run() {
         if (update) {
             update = false
+
             circuit.vertices.forEach {
-                if (it.nameAndIndex != null && it.outgoingEdges.isEmpty()) {
-                    val type = if (it.evaluate()) Material.REDSTONE_BLOCK else Material.WHITE_CONCRETE
-                    pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.forEach { it.type = type }
+                if (it.output) {
+                    val value = it.evaluate()
+                    pinLayout.pinsByNameAndIndex[it.nameAndIndex]?.let {
+                        when (it.first) {
+                            PinLayout.Pin.Type.Self -> it.second.forEach { it.type = if (value) Material.REDSTONE_BLOCK else Material.WHITE_CONCRETE }
+                            PinLayout.Pin.Type.Neighbor -> it.second.forEach {
+                                horizontalNeighborFaces.forEach { face ->
+                                    val block = it.getRelative(face)
+                                    when (val blockData = block.blockData) {
+                                        is AnaloguePowerable -> {
+                                            blockData.power = if (value) blockData.maximumPower else 0
+                                            block.blockData = blockData
+                                        }
+
+                                        is Lightable -> {
+                                            blockData.isLit = value
+                                            block.blockData = blockData
+                                        }
+
+                                        is Openable -> {
+                                            blockData.isOpen
+                                            block.blockData = blockData
+                                        }
+
+                                        is Powerable -> {
+                                            blockData.isPowered = value
+                                            block.blockData = blockData
+                                        }
+                                    }
+                                }
+                            }
+
+                            PinLayout.Pin.Type.Value -> it.second.forEach { it.type = if (value) Material.WHITE_CONCRETE else Material.BLACK_CONCRETE }
+                        }
+                    }
                 }
             }
         }
@@ -89,4 +129,8 @@ class Simulation(
             is RedstoneWire -> blockData.allowedFaces.firstNotNullOfOrNull { if (blockData.getFace(it) == RedstoneWire.Connection.SIDE) pinLayout.pins[getRelative(it)] else null }
             else -> null
         }
+
+    companion object {
+        private val horizontalNeighborFaces = mutableListOf(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST)
+    }
 }

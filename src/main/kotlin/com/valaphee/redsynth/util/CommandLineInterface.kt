@@ -42,7 +42,9 @@ open class CommandLineInterface(
         while (value != -1 && !buffer.append(value.toChar()).takeLast(prompt.length).contentEquals(prompt)) {
             value = stdout.read()
         }
-        if (value == -1) throw CommandLineException(stderr.readAllBytes().decodeToString().replace('\n', ' ').trim())
+        if (value == -1) {
+            throw CommandLineException(stderr.readAllBytes().decodeToString().replace('\n', ' ').trim())
+        }
         return buffer.substring(buffer.indexOf('\n'), buffer.length - prompt.length).toString()
     }
 }

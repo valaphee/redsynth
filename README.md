@@ -33,7 +33,7 @@ The ports also have to be described:<br>
 ^, °, v, < or > (location of the port, relative to the sign)
 <Verilog name>
 <index> (default is 0)
-<type> (default is pin)
+<type> (default is self, can be either self, neighbor, value)
 ```
 
 And voilà, your blackbox is finished.<br>

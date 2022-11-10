@@ -29,11 +29,11 @@ class PinLayout(
 ) {
     val boundingBox = BoundingBox()
 
-    val pins: Map<Block, Pair<String, Int>>
-    val pinsByNameAndIndex: Map<Pair<String, Int>, List<Block>>
+    val pins: Map<Block, Pin>
+    val pinsByNameAndIndex: Map<Pair<String, Int>, Pair<Pin.Type, List<Block>>>
 
     init {
-        val pins = mutableMapOf<Block, Pair<String, Int>>()
+        val pins = mutableMapOf<Block, Pin>()
 
         val visitedBlocks = mutableSetOf<Block>()
         val blocksToVisit = mutableListOf(block)
@@ -43,7 +43,7 @@ class PinLayout(
                 continue
             }
 
-            BlockFace.values().forEach {
+            neighborFaces.forEach {
                 val neighborBlock = block.getRelative(it)
                 val neighborBlockData = neighborBlock.blockData
                 if (neighborBlockData is WallSign) {
@@ -67,7 +67,12 @@ class PinLayout(
                             else -> null
                         }
                         else -> null
-                    }?.let { pins[it] = PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(1)) to (PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(2)).toIntOrNull() ?: 0) }
+                    }?.let {
+                        // Check if the sign is describing a pin block
+                        if (it.type == Material.WHITE_CONCRETE) {
+                            pins[it] = Pin(Pin.Type[PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(3))], PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(1)), (PlainTextComponentSerializer.plainText().serialize(neighborBlockState.line(2)).toIntOrNull() ?: 0))
+                        }
+                    }
                 } else when (neighborBlock.type) {
                     Material.WHITE_CONCRETE, Material.LIGHT_GRAY_CONCRETE, Material.BLACK_CONCRETE, Material.REDSTONE_BLOCK -> blocksToVisit.add(neighborBlock)
                     else -> Unit
@@ -80,6 +85,28 @@ class PinLayout(
         }
 
         this.pins = pins
-        pinsByNameAndIndex = pins.entries.groupBy { it.value }.mapValues { it.value.map { it.key } }
+        pinsByNameAndIndex = pins.entries.groupBy { it.value.name to it.value.index }.mapValues { it.value.first().value.type to it.value.map { it.key } }
+    }
+
+    class Pin(
+        val type: Type,
+        val name: String,
+        val index: Int
+    ) {
+        enum class Type(
+            val key: String
+        ) {
+            Self("self"), Neighbor("neighbor"), Value("value");
+
+            companion object {
+                private val byKey = values().associateBy { it.key }
+
+                operator fun get(key: String) = byKey[key] ?: Self
+            }
+        }
+    }
+
+    companion object {
+        private val neighborFaces = mutableListOf(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.UP, BlockFace.DOWN)
     }
 }

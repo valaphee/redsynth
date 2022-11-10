@@ -25,7 +25,11 @@ class Circuit(
 
     init {
         val vertices = mutableMapOf<Int, Vertex>()
+
+        // Only ports need names.
         module.ports.forEach { (name, port) -> port.bits.forEachIndexed { index, bit -> vertices[bit as Int] = Vertex(name to index) } }
+
+        // Find all cells and convert them to a tree.
         module.cells.forEach { (name, cell) ->
             when (cell.type) {
                 "\$_NOT_" -> {
@@ -34,6 +38,7 @@ class Circuit(
                     edgeY.incomingEdges += edgeA
                     edgeA.outgoingEdges += edgeY
                 }
+
                 "\$_OR_" -> {
                     val edgeA = vertices.getOrPut(cell.connections["A"]!!.single() as Int) { Vertex() }
                     val edgeB = vertices.getOrPut(cell.connections["B"]!!.single() as Int) { Vertex() }
@@ -42,9 +47,11 @@ class Circuit(
                     edgeA.outgoingEdges += edgeY
                     edgeB.outgoingEdges += edgeY
                 }
+
                 else -> error(name)
             }
         }
+
         this.vertices = vertices.values.toList()
     }
 
@@ -58,6 +65,9 @@ class Circuit(
         val incomingEdges: MutableList<Vertex> = mutableListOf(),
         val outgoingEdges: MutableList<Vertex> = mutableListOf()
     ) {
+        val input get() = nameAndIndex == null && incomingEdges.isEmpty()
+        val output get() = nameAndIndex == null && outgoingEdges.isEmpty()
+
         var value: Boolean = false
 
         fun updateAndEvaluate(value: Boolean) {
